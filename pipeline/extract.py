@@ -22,10 +22,11 @@ class AdzunaClient:
         self.app_id = APPLICATION_KEY
         
     def get_page(self, page: int, location: str) -> Any:
-        """Getting a selected jobs page
+        """Get a selected jobs page for a specified location 
 
         Args:
             page (int): The page number
+            location (str): Location to search jobs for
 
         Returns:
             json: {count, mean, results[id, title, description, created, redirect_url, adref, latitude, longitude, location]} 
@@ -46,6 +47,16 @@ class AdzunaClient:
     
     
     def get_page_with_category(self, page: int, location: str, category: str) -> Any:
+        """Get a selected jobs page in the requested category for a specified location 
+
+        Args:
+            page (int): The page number
+            location (str): Location to search jobs for
+            category (str): Category of the job (tag)
+
+        Returns:
+            json: {count, mean, results[id, title, description, created, redirect_url, adref, latitude, longitude, location]} 
+        """
         try:
             r = requests.get(f"{self.base_url}/jobs/{location}/search/{page}?app_id={self.app_id}&app_key={self.api_key}&category={category}", headers=self.headers)
             r.raise_for_status()
