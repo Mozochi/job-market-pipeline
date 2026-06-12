@@ -26,17 +26,30 @@ def injest_data(file_name: str) -> Any:
         return 0
     
     
-    
 
+def transform_search(file_name: str) -> list:
+    """Transforms the job search data pulled from the Adzuna API
 
+    Args:
+        file_name (str): File name of the .json file containing the raw api data
 
-def transform_search_data(file_name: str):
+    Returns:
+        jobs (list): returns a cleaned version of the raw api data, removing unnecessary columns
+    """
     data = injest_data(file_name)
     jobs = []
     
-    data = data["results"]
+    # Checking if data is empty
+    if data == 0:
+        print("An error has occured: No Data Found!")
+        return jobs # Returns an empty list
     
-    for i, job_listing in enumerate(data):
+    try: 
+        data = data["results"]
+    except Exception as e:
+        print(f"Results column not found: {e}")
+    
+    for job_listing in data:
         jobs_dict = {
             "job_title": job_listing.get("title"),
             "location": job_listing.get("location"),
@@ -48,5 +61,33 @@ def transform_search_data(file_name: str):
         jobs.append(jobs_dict)
     return jobs
 
-job_data = transform_search_data("results.json")
-export_cleaned_data(job_data, "jobs.json")
+
+def transform_category(file_name: str) -> list[tuple]:
+    data = injest_data(file_name)
+    categories = [] 
+    
+    # Checking if data is empty
+    if data == 0:
+        print("An error has occured: No Data Found!")
+        return categories # Returns an empty list
+    
+    try:
+        data = data["results"]
+    except Exception as e:
+        print(f"Results column not found: {e}")
+        
+    for category in data:
+        category_dict = {
+            "tag": category.get("tag"),
+            "label": category.get("label")
+        }
+        categories.append(category_dict)
+    return categories
+    
+
+
+#job_data = transform_search("results.json")
+#export_cleaned_data(job_data, "jobs.json")
+
+category_data = transform_category("categories.json")
+export_cleaned_data(category_data, "categories_silver.json")
