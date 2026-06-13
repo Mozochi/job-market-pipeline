@@ -5,14 +5,17 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 import json
+from datetime import datetime
 
 dotenv_path = Path(__file__).parent.parent / "configs" / ".env"
 load_dotenv(dotenv_path)
 
 API_KEY = os.getenv("ADZUNA_API_KEY")
 APPLICATION_KEY = os.getenv("ADZUNA_APPLICATION_ID")
+RAW_DATA_PATH = Path(__file__).parent.parent / "data" / "raw"
+MANIFEST_FILE = Path(__file__).parent.parent / "data" / "manifest.json"
+SEARCH_TYPES = {0: "results", 1: "categories"}
 
-## TODO Need to update the returned type for the functions to fit the shape of the response
 
 class AdzunaClient:
     def __init__(self):
@@ -21,7 +24,7 @@ class AdzunaClient:
         self.api_key = API_KEY
         self.app_id = APPLICATION_KEY
         
-    def get_page(self, page: int, location: str) -> Any:
+    def get_page(self, page: int, location: str):
         """Get a selected jobs page for a specified location 
 
         Args:
@@ -34,7 +37,11 @@ class AdzunaClient:
         try:
             r = requests.get(f"{self.base_url}/jobs/{location}/search/{page}?app_id={self.app_id}&app_key={self.api_key}", headers=self.headers)
             r.raise_for_status()
-            return r.json()
+            save_raw_data(json_data=r.json()["results"], 
+                          type=SEARCH_TYPES.get(0),
+                          location=location, 
+                          page=page,
+                          category="N/A")
             
         except HTTPError as e:
             print(f"HTTP error: {e.response.status_code} - {e.response.text}")
@@ -46,7 +53,7 @@ class AdzunaClient:
             print(f"An error has occured: {e}")
     
     
-    def get_page_with_category(self, page: int, location: str, category: str) -> Any:
+    def get_page_with_category(self, page: int, location: str, category: str):
         """Get a selected jobs page in the requested category for a specified location 
 
         Args:
@@ -60,7 +67,11 @@ class AdzunaClient:
         try:
             r = requests.get(f"{self.base_url}/jobs/{location}/search/{page}?app_id={self.app_id}&app_key={self.api_key}&category={category}", headers=self.headers)
             r.raise_for_status()
-            return r.json()
+            save_raw_data(json_data=r.json()["results"], 
+                          type=SEARCH_TYPES.get(0),
+                          location=location, 
+                          page=page,
+                          category=category)
             
         except HTTPError as e:
             print(f"HTTP error: {e.response.status_code} - {e.response.text}")
@@ -72,7 +83,7 @@ class AdzunaClient:
             print(f"An error has occured: {e}")
         
         
-    def get_categories(self, location: str) -> Any:
+    def get_categories(self, location: str):
         """Get all available categories used in searching
 
         Args:
@@ -85,8 +96,12 @@ class AdzunaClient:
         """
         try:
             r = requests.get(f"{self.base_url}/jobs/{location}/categories?app_id={self.app_id}&app_key={self.api_key}", headers=self.headers)
-            r.raise_for_status
-            return r.json()
+            r.raise_for_status()
+            save_raw_data(json_data=r.json()["results"], 
+                          type=SEARCH_TYPES.get(1),
+                          location=location, 
+                          page=1,
+                          category="N/A")
         
         except HTTPError as e:
             print(f"HTTP error: {e.response.status_code} - {e.response.text}")
@@ -97,13 +112,35 @@ class AdzunaClient:
         except Exception as e:
             print(f"An error has occured: {e}")
 
+def save_raw_data(json_data: Any, type: str, location: str, page: int, category: str): 
+    """Save the raw data to data/raw and update the manifest to include the file
+
+    Args:
+        file_path (str): path to the file
+        json_data (Any): json data to be saved
+        type (str): {0: "results", 1: "categories"}
+        location (str): location for the search
+        page (int): page number of the search
+        category (str): category of the job search e.g. it-job
+    """
+    
+    current_date = datetime.today().strftime('%Y-%m-%d')
+    if category == "N/A":
+        file_name = f"{type}-{location}-{page}-{current_date}.json"
+    else:
+        file_name = f"{type}-{location}-{page}-{category}-{current_date}.json"
+    
+    with open(f"{RAW_DATA_PATH}/{file_name}", "w") as raw_file:
+        json.dump(json_data, raw_file)
+    print(f"Saved {file_name}.json successfully")
+    
+    # TODO
+    # Updating manifest.json (NDJSON)
+    # {filepath:f"{RAW_DATA_PATH}/{file_name}", type: results or categories, date: current_date, location: location, category:job_category, processed: true or false}
+        
 
 if __name__ == "__main__":
     client = AdzunaClient()
-    #page_data = client.get_page(page=1, location="gb")["results"]
-    #category_data = client.get_categories("gb") 
-    json_data = client.get_page_with_category(1, "gb", "it-jobs")
-
-    with open("data/raw/results.json", "w") as f:
-        json.dump(json_data, f)
-    
+    #client.get_page(page=1, location="gb")["results"]
+    client.get_categories("gb") 
+    client.get_page_with_category(1, "gb", "it-jobs")

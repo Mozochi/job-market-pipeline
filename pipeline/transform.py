@@ -44,10 +44,6 @@ def transform_search(file_name: str) -> list:
         print("An error has occured: No Data Found!")
         return jobs # Returns an empty list
     
-    try: 
-        data = data["results"]
-    except Exception as e:
-        print(f"Results column not found: {e}")
     
     for job_listing in data:
         jobs_dict = {
@@ -70,13 +66,9 @@ def transform_category(file_name: str) -> list[tuple]:
     if data == 0:
         print("An error has occured: No Data Found!")
         return categories # Returns an empty list
-    
-    try:
-        data = data["results"]
-    except Exception as e:
-        print(f"Results column not found: {e}")
         
     for category in data:
+        print(category)
         category_dict = {
             "tag": category.get("tag"),
             "label": category.get("label")
